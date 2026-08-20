@@ -1,0 +1,34 @@
+name: ShellCheck
+
+on:
+  push:
+    paths:
+      - "scripts/**/*.sh"
+      - ".github/workflows/shellcheck.yml"
+  pull_request:
+    paths:
+      - "scripts/**/*.sh"
+      - ".github/workflows/shellcheck.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        shell: bash
+        run: |
+          mapfile -t scripts < <(find scripts -type f -name '*.sh' -print)
+          if (( ${#scripts[@]} == 0 )); then
+            echo "No shell scripts found."
+            exit 0
+          fi
+          shellcheck "${scripts[@]}"
