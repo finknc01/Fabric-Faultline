@@ -1,18 +1,44 @@
 # Fabric-Faultline
 
-## Operation Packetfall: Save the Helios AI Cluster
+> **Operation Packetfall — the Helios AI cluster is losing packets, breaking routes, and inventing new outages faster than the network team can explain them. Follow the packet and save the cluster.**
 
-**A story-driven networking lab for learning networks by building, breaking, tracing, and repairing them.**
+## Skills you will build
 
-You are the new infrastructure engineer assigned to **Helios**, a small fictional AI cluster. On your first week, the network starts failing in increasingly creative ways.
+- TCP/IP and practical packet-path reasoning
+- Ethernet, MAC addresses, ARP/neighbor discovery, and switching
+- IPv4 addressing, subnetting, routes, and default gateways
+- VLANs and network segmentation
+- TCP vs UDP, ports, sockets, DNS, and firewall reasoning
+- Linux networking with namespaces, veth pairs, bridges, and routing
+- Packet capture with `tcpdump`
+- Throughput, latency, loss, MTU, and congestion diagnostics
+- Leaf-spine and east-west AI data-center networking concepts
+- RDMA, RoCE, InfiniBand, and NCCL context
+- Evidence-driven network troubleshooting instead of configuration guessing
 
-Your job is not to memorize networking trivia. Your job is to answer one question over and over:
+## General idea
+
+Fabric-Faultline is the **networking-from-first-principles lab**.
+
+You are the new infrastructure engineer assigned to a fictional AI cluster called **Helios**. The network starts failing in increasingly creative ways: two hosts that should communicate cannot, a switch path disappears, DNS gets blamed for an IP problem, ping works while the application does not, throughput collapses without connectivity fully dying, and eventually distributed AI traffic starts exposing the limits of the fabric.
+
+You will build each network in a healthy state, break one part intentionally, and investigate the failure by tracing the packet hop by hop.
+
+The recurring question is:
 
 > **Where did the packet stop, and what evidence proves it?**
 
-This lab starts from first principles and grows into a miniature AI data-center fabric using Linux network namespaces, virtual Ethernet links, Linux bridges, routing, traffic shaping, packet captures, and eventually leaf-spine concepts.
+The lab starts at the level of interfaces, MAC addresses, subnets, and ARP before growing into routing, VLANs, leaf-spine design, congestion, and AI networking. Linux network namespaces let most of the topology run on one laptop without needing a rack of switches.
 
-No physical switch is required. The core lab is designed to run on a single Linux machine or VM.
+---
+
+# Operation Packetfall: Save the Helios AI Cluster
+
+Your job is not to memorize networking trivia. Your job is to learn a repeatable way to reason about communication failures.
+
+The campaign grows from two virtual hosts into a miniature AI data-center fabric using Linux network namespaces, virtual Ethernet links, Linux bridges, routing, traffic shaping, packet captures, and eventually leaf-spine concepts.
+
+No physical switch is required for the core campaign.
 
 ---
 
@@ -244,13 +270,13 @@ Primary references used throughout the lab:
 
 - Ubuntu Server networking: https://documentation.ubuntu.com/server/explanation/networking/
 - Ubuntu networking configuration: https://documentation.ubuntu.com/server/explanation/networking/configuring-networks/
-- NVIDIA Ethernet / RoCE documentation: https://docs.nvidia.com/networking/
+- NVIDIA networking documentation: https://docs.nvidia.com/networking/
 
 ---
 
 ## Completion standard
 
-Fabric-Faultline is complete when I can look at a symptom such as:
+Fabric-Faultline is complete when you can look at a symptom such as:
 
 > "Compute-03 can ping its gateway, cannot reach Compute-01, DNS works, TCP retransmissions are rising, and throughput collapsed after a topology change."
 
