@@ -2,6 +2,17 @@
 
 > **Operation Packetfall — the Helios AI cluster is losing packets, breaking routes, and inventing new outages faster than the network team can explain them. Follow the packet and save the cluster.**
 
+## Project status
+
+| Field | Current state |
+|---|---|
+| **Status** | **Planned — early missions available; main campaign scheduled later** |
+| **Current stage** | Campaign and mission files are authored; no mission completion is claimed yet |
+| **Lab environment** | Linux namespaces, veth pairs, bridges, routing, traffic shaping, and packet capture on the laptop |
+| **Evidence rule** | Real virtual-network experiments are measured; InfiniBand/RoCE/RDMA production behavior is modeled/reference unless actually available |
+| **Last plan sync** | 2026-08-19 |
+| **License** | No open-source license is granted unless an explicit license is added later |
+
 ## Skills you will build
 
 - TCP/IP and practical packet-path reasoning
