@@ -1,154 +1,94 @@
 # Network Detective Cheat Sheet
 
-This is not a command list to memorize.
+This is not a command list to memorize. It is a list of **questions to ask when something is broken on a RHEL host**.
 
-It is a list of **questions to ask when something is broken**.
+## 1. What does NetworkManager think is active?
 
----
+```bash
+nmcli device status
+nmcli connection show --active
+```
 
-## 1. What interfaces exist, and are they alive?
+Ask whether the expected device and connection profile are active before assuming the kernel state came from the configuration you intended.
+
+## 2. What interfaces exist, and are they alive?
 
 ```bash
 ip link
 ```
 
-Ask:
+Ask whether the expected interface exists, is UP, and reports a usable lower-layer state.
 
-- Does the expected interface exist?
-- Is it UP?
-- Is the lower layer reporting a usable link?
-
----
-
-## 2. What addresses does this host believe it owns?
+## 3. What addresses does this host believe it owns?
 
 ```bash
 ip addr
 ```
 
-Ask:
+Check the IP, prefix length, and interface. The prefix changes what the host believes is local.
 
-- Correct IP?
-- Correct prefix length?
-- Correct interface?
-
-Do not treat `10.0.0.10/24` and `10.0.0.10/30` as the same configuration. The prefix changes what the host believes is local.
-
----
-
-## 3. Where does Linux intend to send the packet?
+## 4. Where does the kernel intend to send the packet?
 
 ```bash
 ip route
 ip route get <DESTINATION_IP>
 ```
 
-Ask:
+Ask whether the destination is directly connected, which interface/source address will be used, and whether a gateway is required.
 
-- Is the destination directly connected?
-- Which interface will be used?
-- Is there a gateway/next hop?
-- Which source IP will Linux choose?
-
-This is often more useful than staring at a topology diagram.
-
----
-
-## 4. Can the host resolve the local next hop?
+## 5. Can the host resolve the local next hop?
 
 ```bash
 ip neigh
 ```
 
-Ask:
+Check the destination/gateway link-layer entry and its state. A valid route plus failed neighbor resolution points lower in the path than an application problem.
 
-- Is there a MAC address for the destination or gateway?
-- Is the neighbor entry REACHABLE, STALE, INCOMPLETE, or FAILED?
-
-A useful clue:
-
-```text
-route exists + neighbor resolution fails
-```
-
-usually points you lower in the path than an application problem.
-
----
-
-## 5. Can basic IP traffic make the trip?
+## 6. Can basic IP traffic make the trip?
 
 ```bash
 ping <IP>
 ```
 
-Ping answers a limited question.
+A successful ping does **not** prove DNS, TCP/UDP, a particular port, firewall policy, or application health.
 
-A successful ping does **not** mean:
-
-- DNS works
-- TCP works
-- a specific port is open
-- the application is healthy
-
-It proves only part of the path.
-
----
-
-## 6. Where does the routed path appear to stop?
+## 7. Where does the routed path appear to stop?
 
 ```bash
 tracepath <IP>
 ```
 
-Use this to reason about intermediate Layer-3 hops and path MTU clues.
+Use it to reason about Layer-3 hops and path-MTU clues without assuming every router will answer diagnostic probes.
 
-Do not assume every router will answer diagnostic probes.
-
----
-
-## 7. Is the application listening?
+## 8. Is the application listening where you expect?
 
 ```bash
 ss -lntup
 ```
 
-Ask:
+Check protocol, port, bind address, and whether a listener exists at all.
 
-- TCP or UDP?
-- Correct port?
-- Bound to the correct address?
-- Listening at all?
-
-Classic symptom:
-
-```text
-ping works
-application fails
-```
-
-This should make you investigate higher layers instead of changing routes.
-
----
-
-## 8. Is DNS the actual problem?
+## 9. Does RHEL firewall policy permit the path?
 
 ```bash
+firewall-cmd --get-active-zones
+firewall-cmd --list-all
+```
+
+If necessary, inspect the underlying nftables state as supporting evidence, but administer normal RHEL host policy through firewalld.
+
+## 10. Is DNS the actual problem?
+
+```bash
+nmcli device show | grep -E 'IP4.DNS|IP6.DNS'
+cat /etc/resolv.conf
 dig <NAME>
-resolvectl status
+getent hosts <NAME>
 ```
 
-Compare:
+Compare IP-based and name-based tests. If the IP path works and the name does not, stop blaming switching or routing until the resolver path is understood.
 
-```bash
-ping <IP>
-ping <NAME>
-```
-
-If the IP works and the name does not, stop blaming switching.
-
----
-
-## 9. What are the packets actually doing?
+## 11. What are the packets actually doing?
 
 ```bash
 tcpdump -ni <INTERFACE>
@@ -163,19 +103,9 @@ tcpdump -ni eth0 host 10.0.0.20
 tcpdump -ni eth0 tcp port 443
 ```
 
-Ask:
+Ask whether the request left, whether the reply returned, whether retransmissions are present, whether neighbor resolution repeats, and whether traffic is on the interface you predicted.
 
-- Did the request leave?
-- Did the reply return?
-- Are there retransmissions?
-- Is ARP happening repeatedly?
-- Is the traffic on the interface you expected?
-
-`tcpdump` is how you stop arguing with your assumptions.
-
----
-
-## 10. What does the switch know?
+## 12. What does the virtual switch know?
 
 For Linux bridges:
 
@@ -184,39 +114,24 @@ bridge link
 bridge fdb show
 ```
 
-Ask:
+Check bridge membership and learned MAC-to-port mappings.
 
-- Is the port part of the bridge?
-- Which MAC addresses were learned on which ports?
-
----
-
-## 11. Is the link healthy but slow?
+## 13. Is the link healthy but slow?
 
 ```bash
 iperf3
 ethtool <INTERFACE>
 ```
 
-Later missions add:
+Later missions add `tc` for deliberate latency, loss, and bandwidth experiments.
 
-```bash
-tc
-```
+> **Reachable and healthy are different states.**
 
-for deliberate latency/loss/bandwidth problems.
-
-The key lesson:
-
-> **"Reachable" and "healthy" are different states.**
-
----
-
-# The troubleshooting ladder
-
-When you freeze during a network problem, use this order:
+## Troubleshooting ladder
 
 ```text
+Expected NetworkManager profile active?
+        ↓
 Interface exists/up?
         ↓
 Correct IP/prefix?
@@ -225,9 +140,9 @@ Correct route?
         ↓
 Next hop resolvable?
         ↓
-Packets leaving?
+Packets leaving/arriving?
         ↓
-Packets arriving?
+Firewall permits path?
         ↓
 Transport port reachable/listening?
         ↓
@@ -236,18 +151,4 @@ Name resolution correct?
 Application healthy?
 ```
 
-It is not universal, but it gives you a disciplined starting point.
-
----
-
-# The most important habit
-
-Never say:
-
-> "The network is broken."
-
-Try to say:
-
-> "The source has a valid interface and route, ARP for the gateway succeeds, ICMP leaves the source and reaches the router, but no reply appears on the destination-side interface. The fault is therefore downstream of the source subnet."
-
-That is the difference between guessing and troubleshooting.
+The goal is not to say “the network is broken.” The goal is to identify the first point where observed behavior diverges from the expected path and show the evidence that proves it.
