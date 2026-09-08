@@ -2,200 +2,82 @@
 
 > **Operation Packetfall — the Helios AI cluster is losing packets, breaking routes, and inventing new outages faster than the network team can explain them. Follow the packet and save the cluster.**
 
-## Project status
+## Lab environment
 
-| Field | Current state |
-|---|---|
-| **Status** | **Planned — early missions available; main campaign scheduled later** |
-| **Current stage** | Campaign and mission files are authored; no mission completion is claimed yet |
-| **Lab environment** | Linux namespaces, veth pairs, bridges, routing, traffic shaping, and packet capture on the laptop |
-| **Evidence rule** | Real virtual-network experiments are measured; InfiniBand/RoCE/RDMA production behavior is modeled/reference unless actually available |
-| **Last plan sync** | 2026-08-19 |
-| **License** | No open-source license is granted unless an explicit license is added later |
+- **Core environment:** RHEL 10 lab host by default, using Linux network namespaces, veth pairs, bridges, routing, traffic shaping, and packet capture. If mentored work is tied to another supported RHEL major version, mirror that version.
+- **Evidence rule:** Real virtual-network experiments are measured; InfiniBand/RoCE/RDMA production behavior is modeled/reference unless actually available.
+- **Hardware rule:** No physical switch is required for the core campaign.
+- **Safety rule:** Use the single documented reset script to remove only known lab namespaces/links; do not flush host-wide routes or firewall state as a generic cleanup step.
 
-## Skills you will build
+## Skills developed
 
 - TCP/IP and practical packet-path reasoning
 - Ethernet, MAC addresses, ARP/neighbor discovery, and switching
 - IPv4 addressing, subnetting, routes, and default gateways
 - VLANs and network segmentation
 - TCP vs UDP, ports, sockets, DNS, and firewall reasoning
-- Linux networking with namespaces, veth pairs, bridges, and routing
-- Packet capture with `tcpdump`
-- Throughput, latency, loss, MTU, and congestion diagnostics
-- Leaf-spine and east-west AI data-center networking concepts
+- RHEL networking with NetworkManager plus namespaces, veth pairs, bridges, and routing
+- packet capture with `tcpdump`
+- throughput, latency, loss, MTU, and congestion diagnostics
+- leaf-spine and east-west AI data-center networking concepts
 - RDMA, RoCE, InfiniBand, and NCCL context
-- Evidence-driven network troubleshooting instead of configuration guessing
+- evidence-driven troubleshooting instead of configuration guessing
 
-## General idea
+## Purpose
 
 Fabric-Faultline is the **networking-from-first-principles lab**.
 
-You are the new infrastructure engineer assigned to a fictional AI cluster called **Helios**. The network starts failing in increasingly creative ways: two hosts that should communicate cannot, a switch path disappears, DNS gets blamed for an IP problem, ping works while the application does not, throughput collapses without connectivity fully dying, and eventually distributed AI traffic starts exposing the limits of the fabric.
+You are the new infrastructure engineer assigned to fictional AI cluster **Helios**. The network starts failing in increasingly difficult ways: two hosts that should communicate cannot, a switching path disappears, DNS gets blamed for an IP problem, ping works while the application does not, throughput collapses without connectivity fully dying, and eventually distributed AI traffic starts exposing the limits of the fabric.
 
-You will build each network in a healthy state, break one part intentionally, and investigate the failure by tracing the packet hop by hop.
-
-The recurring question is:
+Every incident asks the same question:
 
 > **Where did the packet stop, and what evidence proves it?**
 
-The lab starts at the level of interfaces, MAC addresses, subnets, and ARP before growing into routing, VLANs, leaf-spine design, congestion, and AI networking. Linux network namespaces let most of the topology run on one laptop without needing a rack of switches.
+The lab grows from two namespaces into a miniature AI data-center fabric while keeping the distinction between locally measured behavior and production-only concepts explicit.
 
----
-
-# Operation Packetfall: Save the Helios AI Cluster
-
-Your job is not to memorize networking trivia. Your job is to learn a repeatable way to reason about communication failures.
-
-The campaign grows from two virtual hosts into a miniature AI data-center fabric using Linux network namespaces, virtual Ethernet links, Linux bridges, routing, traffic shaping, packet captures, and eventually leaf-spine concepts.
-
-No physical switch is required for the core campaign.
-
----
-
-## The campaign
+## Campaign
 
 | Mission | Incident | Networking concept | Victory condition |
 |---|---|---|---|
-| 00 | **Boot Camp: Follow the Packet** | layers, interfaces, MAC, IP, TCP/UDP, ICMP | explain one packet end-to-end |
-| 01 | **Two Machines, No Excuses** | interfaces, subnets, ARP/neighbor discovery | two isolated hosts can ping |
-| 02 | **The Switchyard** | Ethernet, MAC learning, bridges | three hosts communicate through a virtual switch |
-| 03 | **The Quarantine Deck** | VLAN concepts and segmentation | traffic is intentionally separated and restored correctly |
-| 04 | **The Router at the Edge** | routing tables, gateways, IP forwarding | two subnets communicate through a router |
-| 05 | **The Name That Vanished** | DNS vs connectivity | prove whether an outage is DNS or network-related |
-| 06 | **The Invisible Wall** | ports, TCP/UDP, firewall reasoning | identify why ping works but an application does not |
-| 07 | **The Broken Road** | latency, loss, MTU, throughput, `tc`, `iperf3` | diagnose degraded—not dead—connectivity |
-| 08 | **The Fabric Awakens** | leaf-spine, ECMP concepts, east-west traffic | build and explain a miniature fabric |
-| 09 | **The Training Job From Hell** | congestion, bottlenecks, AI traffic patterns | find why distributed traffic collapses under load |
-| 10 | **Beyond Ethernet** | RDMA, RoCE, InfiniBand, NCCL context | explain why AI clusters use specialized networking |
-| FINAL | **Black Sky Incident** | cross-layer troubleshooting | repair an unknown multi-fault scenario using evidence only |
+| [00 — Follow the Packet](missions/00-follow-the-packet.md) | Boot Camp | layers, interfaces, MAC, IP, TCP/UDP, ICMP | explain one packet end-to-end |
+| [01 — Two Machines, No Excuses](missions/01-two-machines.md) | two isolated hosts | interfaces, subnets, ARP/neighbor discovery | two hosts communicate and faults are explained |
+| [02 — The Switchyard](missions/02-switchyard.md) | switching failure | Ethernet, MAC learning, bridges | three hosts communicate through a virtual switch |
+| [03 — The Quarantine Deck](missions/03-quarantine-deck.md) | segmentation failure | VLAN concepts and segmentation | traffic is intentionally separated and restored |
+| [04 — The Router at the Edge](missions/04-router-at-the-edge.md) | routing failure | routing tables, gateways, IP forwarding | two subnets communicate through a router |
+| [05 — The Name That Vanished](missions/05-name-that-vanished.md) | naming failure | DNS vs connectivity | prove whether an outage is DNS or network-related |
+| [06 — The Invisible Wall](missions/06-invisible-wall.md) | application path blocked | ports, TCP/UDP, firewalld | identify why ping works but an application does not |
+| [07 — The Broken Road](missions/07-broken-road.md) | degraded path | latency, loss, MTU, throughput, `tc`, `iperf3` | diagnose degraded—not dead—connectivity |
+| [08 — The Fabric Awakens](missions/08-fabric-awakens.md) | fabric expansion | leaf-spine, ECMP concepts, east-west traffic | build and explain a miniature fabric |
+| [09 — The Training Job From Hell](missions/09-training-job-from-hell.md) | congestion | bottlenecks, AI traffic patterns | explain why distributed traffic collapses under load |
+| [10 — Beyond Ethernet](missions/10-beyond-ethernet.md) | specialized fabrics | RDMA, RoCE, InfiniBand, NCCL context | explain why AI clusters use specialized networking |
+| [Final — Black Sky](missions/final-black-sky.md) | multi-fault incident | cross-layer troubleshooting | repair an unknown scenario using evidence only |
 
-The missions are deliberately ordered so each new concept has something concrete underneath it.
+The mission files are authoritative for the build/break/investigate steps.
 
----
+## Investigation rule
 
-## The Helios network
+For any destination or application path, work downward before changing configuration:
 
-The lab grows toward this simplified topology:
-
-```mermaid
-flowchart TB
-    MGMT[Management Node]
-
-    S1[Spine 1]
-    S2[Spine 2]
-    L1[Leaf 1]
-    L2[Leaf 2]
-
-    C1[Compute 1]
-    C2[Compute 2]
-    C3[Compute 3]
-    C4[Compute 4]
-
-    MGMT --- L1
-    S1 --- L1
-    S1 --- L2
-    S2 --- L1
-    S2 --- L2
-    L1 --- C1
-    L1 --- C2
-    L2 --- C3
-    L2 --- C4
-```
-
-At first, most of those "machines" are Linux network namespaces rather than separate computers. That lets the entire topology live inside one laptop while still giving each simulated node its own interfaces, IP addresses, routing table, and packet path.
-
----
-
-## The rule that matters most
-
-Every incident must be investigated in this order:
-
-```text
-1. What is the expected path?
-2. What is the source trying to reach?
-3. Does the source have a usable interface?
-4. Is the destination local or routed?
-5. What does the routing table say?
+1. What is the expected application/data path?
+2. What source and destination are involved?
+3. Is the interface present and up?
+4. What address/prefix does the host have?
+5. What route will the kernel choose?
 6. Can the next hop be resolved?
-7. Does traffic leave the interface?
-8. Does traffic arrive at the next device?
+7. Does traffic leave and arrive where expected?
+8. Does firewall policy allow the path?
 9. Is the transport/application listening?
-10. What changed between working and broken?
-```
+10. What changed between healthy and failed states?
 
-Do not start by randomly changing settings.
+Use `nmcli`, `ip`, `ss`, `bridge`, `ethtool`, `tcpdump`, `iperf3`, `dig`, `getent`, `firewall-cmd`, and `tc` because each answers a specific troubleshooting question—not as a checklist to run blindly.
 
-The lab rewards **evidence before fixes**.
+## Evidence standard
 
----
-
-## Your investigation toolkit
-
-You will gradually learn these tools instead of trying to memorize all of them up front:
-
-```bash
-ip addr
-ip link
-ip route
-ip neigh
-ping
-tracepath
-ss
-bridge
-ethtool
-tcpdump
-iperf3
-dig
-resolvectl
-nft
-tc
-```
-
-For every important command, the goal is to know **which question it answers**.
-
-Example:
-
-```text
-ip addr    → What addresses/interfaces does this host have?
-ip route   → Where does the kernel intend to send this packet?
-ip neigh   → Can the host map a local next-hop IP to a MAC address?
-ss         → Is an application actually listening on the expected port?
-tcpdump    → What packets are really crossing this interface?
-```
-
----
-
-## Lab philosophy
-
-Networking often feels difficult because several independent systems are discussed at once. Fabric-Faultline separates them and then reconnects them.
-
-Each mission has five phases:
-
-### 1. Briefing
-Understand the one new idea needed for the incident.
-
-### 2. Build
-Create a small working network.
-
-### 3. Break
-Introduce one deliberate fault.
-
-### 4. Investigate
-Use observable evidence to locate the fault before repairing it.
-
-### 5. Debrief
-Draw the packet path and explain why the failure produced the symptoms you saw.
-
----
-
-## Incident report format
-
-Every failure worth keeping gets a short incident report:
+Every failure worth keeping should record:
 
 ```text
 Symptom:
-Expected packet path:
+Expected path:
 First confirmed-good point:
 First confirmed-bad point:
 Evidence:
@@ -204,93 +86,32 @@ Test:
 Root cause:
 Fix:
 Why the fix worked:
-How production monitoring could detect it:
+Production monitoring/prevention idea:
 ```
 
-The finished repository should therefore demonstrate troubleshooting ability—not just working configurations.
-
----
-
-## Repository structure
-
-```text
-Fabric-Faultline/
-├── README.md
-├── missions/
-│   ├── 00-follow-the-packet.md
-│   ├── 01-two-machines.md
-│   ├── 02-switchyard.md
-│   ├── 03-quarantine-deck.md
-│   ├── 04-router-at-the-edge.md
-│   ├── 05-name-that-vanished.md
-│   ├── 06-invisible-wall.md
-│   ├── 07-broken-road.md
-│   ├── 08-fabric-awakens.md
-│   ├── 09-training-job-from-hell.md
-│   ├── 10-beyond-ethernet.md
-│   └── final-black-sky.md
-├── scripts/
-│   ├── reset-lab.sh
-│   └── ...
-├── incidents/
-├── diagrams/
-├── captures/
-└── notes/
-```
-
----
+The finished repository should demonstrate troubleshooting ability, not merely working configurations.
 
 ## Prerequisites
 
-Recommended environment:
+Recommended RHEL 10 packages/tools:
 
-- Ubuntu Server 24.04 LTS or another modern Linux distribution
-- root/sudo access
-- `iproute2`
-- `iputils-ping`
-- `tcpdump`
-- `iperf3`
-- `dnsutils`
-- `nftables`
+```bash
+sudo dnf install -y iproute iputils tcpdump iperf3 bind-utils ethtool firewalld
+```
 
-The early missions need very little RAM because Linux namespaces are much lighter than running a VM for every node.
+Use NetworkManager/`nmcli` for RHEL host networking. Namespace/bridge topology inside individual missions may be built directly with `ip`/`bridge` because those objects are deliberately temporary lab constructs.
 
----
+## Production-scale boundary
 
-## AI-infrastructure destination
+Later missions connect ordinary networking to east-west AI traffic, leaf-spine design, oversubscription, congestion, RDMA, RoCE, InfiniBand, and NCCL collective communication.
 
-The beginner missions teach ordinary networking first because advanced AI networking still depends on those fundamentals. Later missions connect Ethernet/IP knowledge to:
+The laptop is **not** an InfiniBand or production RoCE fabric. Those behaviors remain modeled/reference unless real equipment is available.
 
-- east-west cluster traffic
-- leaf-spine design
-- oversubscription
-- congestion
-- loss and latency
-- RDMA
-- RoCE
-- InfiniBand
-- NCCL collective communication
+## References
 
-The goal is not to pretend a laptop is an InfiniBand fabric. The goal is to understand exactly **which behaviors can be reproduced locally, which are being modeled, and why production AI clusters need specialized network designs**.
-
----
-
-## Reference material
-
-Primary references used throughout the lab:
-
-- Ubuntu Server networking: https://documentation.ubuntu.com/server/explanation/networking/
-- Ubuntu networking configuration: https://documentation.ubuntu.com/server/explanation/networking/configuring-networks/
+- RHEL 10 Configuring and managing networking: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/configuring_and_managing_networking/index
 - NVIDIA networking documentation: https://docs.nvidia.com/networking/
 
----
+## Completion condition
 
-## Completion standard
-
-Fabric-Faultline is complete when you can look at a symptom such as:
-
-> "Compute-03 can ping its gateway, cannot reach Compute-01, DNS works, TCP retransmissions are rising, and throughput collapsed after a topology change."
-
-…and form a disciplined troubleshooting plan instead of guessing.
-
-**The final skill is not configuring a network. It is being able to reason about one when it is broken.**
+Fabric-Faultline is complete when you can take an ambiguous symptom, trace the expected packet/application path, identify the first broken layer from evidence, and explain the repair without configuration guessing.
