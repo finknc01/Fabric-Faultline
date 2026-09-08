@@ -18,7 +18,7 @@ Your job is to make them communicate—and then break them in ways that teach yo
 
 ## What you are building
 
-Linux network namespaces let one Linux system act like several isolated network hosts.
+Linux network namespaces let one RHEL system act like several isolated network hosts.
 
 ```text
 alpha                                  beta
@@ -47,8 +47,7 @@ Each namespace gets its own interfaces and routing table.
 Install the basic tools if necessary:
 
 ```bash
-sudo apt update
-sudo apt install -y iproute2 iputils-ping tcpdump
+sudo dnf install -y iproute iputils tcpdump
 ```
 
 Create the namespaces:
