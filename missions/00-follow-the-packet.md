@@ -4,21 +4,18 @@
 
 Helios is not broken yet.
 
-That is suspicious.
-
 Before you are allowed to touch the cluster network, your lead gives you a challenge:
 
-> **Explain exactly what your computer does when it sends one packet to another machine.**
+> **Explain exactly what your RHEL host does when it sends one packet to another machine.**
 
 No subnetting drills. No memorized OSI mnemonics. Your first job is to build a mental model you can actually use during an outage.
-
----
 
 ## Mission objective
 
 By the end of this mission, you should be able to explain the difference between:
 
 - interface
+- NetworkManager connection profile
 - MAC address
 - IP address
 - subnet/prefix
@@ -34,8 +31,6 @@ By the end of this mission, you should be able to explain the difference between
 - DNS
 
 More importantly, you should know **which of these participates at each stage of a connection**.
-
----
 
 ## The mental model
 
@@ -59,93 +54,64 @@ Network interface
 Physical / virtual link
 ```
 
-The receiving machine reverses that process.
-
 A crucial distinction:
 
 > **IP decides where the packet needs to go. Ethernet delivers it across the current local link.**
 
-You will spend the rest of this lab seeing why that distinction matters.
+## Recon your RHEL host
 
----
+Start with NetworkManager:
 
-## Recon your own machine
+```bash
+nmcli device status
+nmcli connection show --active
+```
 
-Run:
+Identify the active connection profile and the device it manages.
+
+Then inspect kernel interface state:
 
 ```bash
 ip link
-```
-
-For every interface you see, answer:
-
-- Is it physical, virtual, loopback, Wi-Fi, Ethernet, bridge, VPN, or something else?
-- Is it UP or DOWN?
-- Does it have a MAC address?
-
-Now run:
-
-```bash
 ip addr
 ```
 
-Find:
+For the primary interface, record its MAC address, IPv4 address, prefix length, and UP/DOWN state.
 
-- your loopback address
-- your primary IPv4 address
-- its prefix length
-- the interface holding that address
-
-Now inspect routing:
+Inspect routing:
 
 ```bash
 ip route
 ```
 
-Find:
+Find your directly connected subnet, default route, default gateway, and egress interface.
 
-- your directly connected subnet
-- your default route
-- your default gateway
-
-Write this sentence using your real values:
+Write this sentence using your actual lab values:
 
 ```text
 Traffic for __________ is directly connected through __________.
 Everything else normally goes to gateway __________ through __________.
 ```
 
----
+## Ask the kernel where a packet would go
 
-## Ask Linux where a packet would go
-
-Pick a public IPv4 address, such as a resolver address, and run:
+Pick a safe public IPv4 address and run:
 
 ```bash
 ip route get 1.1.1.1
 ```
 
-Do **not** focus on whether that particular service is reachable.
+Focus on the route choice rather than whether that service is reachable.
 
-Focus on Linux's routing decision:
-
-- Which interface would it use?
-- Which source IP would it choose?
-- Is there a next-hop gateway?
-
-Now ask about your own subnet's gateway:
+Then ask about your own gateway:
 
 ```bash
 ip route get <YOUR_GATEWAY_IP>
 ```
 
-Compare the two results.
+Explain why one path needs a gateway while the other may not.
 
-Why does one need a gateway while the other may not?
-
----
-
-## Inspect the neighbor table
+## Inspect neighbor state
 
 Run:
 
@@ -153,71 +119,29 @@ Run:
 ip neigh
 ```
 
-This table connects two worlds:
-
-```text
-IP address ↔ link-layer address
-```
-
-Find your gateway if it appears.
-
-Then generate traffic to the gateway:
+Generate traffic to the gateway:
 
 ```bash
 ping -c 2 <YOUR_GATEWAY_IP>
 ```
 
-Run `ip neigh` again.
-
-Observe whether the neighbor state changed.
-
-### Question
-
-If your machine knows the gateway's IP address but does **not** know its MAC address, what must happen before an Ethernet frame can be sent to it?
-
----
+Run `ip neigh` again and explain how IP neighbor resolution connects the network-layer destination to the local link-layer destination.
 
 ## Watch traffic instead of guessing
 
-Identify your active interface, then run this in one terminal:
+On the active interface:
 
 ```bash
 sudo tcpdump -ni <INTERFACE> arp or icmp
 ```
 
-In another terminal, ping your gateway:
+In another terminal:
 
 ```bash
 ping -c 3 <YOUR_GATEWAY_IP>
 ```
 
-Do not worry if you do not see ARP every time; your host may already have a cached neighbor entry.
-
-If necessary, simply focus on the ICMP exchange.
-
-Your job is to connect what `ping` says with what is actually visible on the wire/interface.
-
----
-
-## The three questions that solve half of networking
-
-For any destination IP, ask:
-
-### 1. Is the destination local?
-
-The host compares the destination with its directly connected prefixes.
-
-### 2. If it is not local, where is my next hop?
-
-The routing table decides.
-
-### 3. How do I deliver to that next hop on this link?
-
-The host needs the link-layer information required for the local medium—for Ethernet, typically a MAC address learned through neighbor resolution.
-
-Keep those three questions for the entire lab.
-
----
+Connect what `ping` reports to what is actually visible on the interface.
 
 ## Transport layer observation
 
@@ -227,59 +151,33 @@ Run:
 ss -lntup
 ```
 
-Look for listening sockets.
-
-Notice that an IP address alone does not identify an application.
-
-A useful mental model is:
+Use this mental model:
 
 ```text
-IP address → which host/interface endpoint?
-Port       → which application/service?
-Protocol   → TCP or UDP behavior?
+IP address → host/interface endpoint
+Port       → application/service endpoint
+Protocol   → TCP or UDP behavior
 ```
 
-This is why a server can be reachable by ping while an application is still unavailable.
-
-That exact problem becomes a later mission.
-
----
+This is why a host can be reachable by ICMP while an application is unavailable.
 
 ## DNS: keep it separate
 
-Run:
+Inspect RHEL resolver configuration through NetworkManager and the generated resolver file:
+
+```bash
+nmcli device show | grep -E 'IP4.DNS|IP6.DNS'
+cat /etc/resolv.conf
+```
+
+Query a name:
 
 ```bash
 dig example.com
+getent hosts example.com
 ```
 
-Then inspect your resolver configuration:
-
-```bash
-resolvectl status
-```
-
-DNS answers a naming question:
-
-```text
-What IP address corresponds to this name?
-```
-
-It does **not** prove that the resulting IP is reachable.
-
-One of the most important habits in troubleshooting is separating:
-
-```text
-name-resolution problem
-```
-
-from:
-
-```text
-connectivity problem
-```
-
----
+DNS answers a naming question. It does not prove that the resulting IP is reachable.
 
 ## Mission debrief
 
@@ -287,28 +185,14 @@ Without looking anything up, explain this scenario in plain English:
 
 > You open a connection to a server whose IP is not on your local subnet.
 
-Your explanation should include:
-
-1. the application generates traffic
-2. transport/network information is created
-3. the kernel makes a routing decision
-4. the default gateway is selected as next hop
-5. the gateway must be reachable on the local link
-6. neighbor resolution provides the Ethernet destination information
-7. the frame crosses the local link to the gateway
-8. the IP packet is routed onward
-
-You do **not** need to explain every header field.
-
-You need to understand the path.
-
----
+Your explanation should include the application, transport/network information, route choice, default gateway, neighbor resolution, local Ethernet delivery, and onward routing.
 
 ## Victory condition
 
 You pass Mission 00 when you can look at these commands:
 
 ```bash
+nmcli device status
 ip addr
 ip route
 ip neigh
@@ -325,13 +209,8 @@ Create:
 notes/packet-journey.md
 ```
 
-Draw or describe one packet leaving your machine and reaching a non-local destination.
-
-That becomes your first networking artifact.
-
----
+Draw or describe one packet leaving your RHEL host and reaching a non-local destination.
 
 ## References
 
-- Ubuntu networking introduction: https://documentation.ubuntu.com/server/explanation/intro-to/networking/
-- Ubuntu networking key concepts: https://documentation.ubuntu.com/server/explanation/networking/networking-key-concepts/
+- RHEL 10 Configuring and managing networking: https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/configuring_and_managing_networking/index
